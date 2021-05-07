@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, Type, cast
 
 
@@ -9,7 +10,7 @@ class UnitsMeta(type):
     """A metaclass for all unit classes"""
 
     def __new__(
-        cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
+            cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
     ) -> UnitsMeta:
         """Check required attributes exists in unit class"""
         symbol = namespace["__symbol__"] if "__symbol__" in namespace else None
@@ -44,11 +45,11 @@ class Unit(metaclass=UnitsMeta):
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
-            other._dimensions  # pylint: disable=protected-access
+                other._dimensions  # pylint: disable=protected-access
         ):
             return False
         for dimension1, dimension2 in zip(
-            self._dimensions, other._dimensions  # pylint: disable=protected-access
+                self._dimensions, other._dimensions  # pylint: disable=protected-access
         ):
             idx1, exp1, _ = dimension1
             idx2, exp2, _ = dimension2
@@ -95,6 +96,27 @@ class Unit(metaclass=UnitsMeta):
         units_representation = self.units_string
         return numerical_representation + units_representation
 
+    def __lt__(self, other: Unit) -> bool:
+        assert self._is_matching_dimensions(other)
+        return self._numerical_val < other._numerical_val  # type: ignore
+
+    def __le__(self, other: Unit) -> bool:
+        assert self._is_matching_dimensions(other)
+        return self._numerical_val <= other._numerical_val  # type: ignore
+
+    def __eq__(self, other: object) -> bool:
+        assert isinstance(other, Unit)
+        assert self._is_matching_dimensions(other)
+        return self._numerical_val == other._numerical_val
+
+    def __ge__(self, other: Unit) -> bool:
+        assert self._is_matching_dimensions(other)
+        return self._numerical_val >= other._numerical_val  # type: ignore
+
+    def __gt__(self, other: Unit) -> bool:
+        assert self._is_matching_dimensions(other)
+        return self._numerical_val > other._numerical_val  # type: ignore
+
     def __iadd__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
         self._numerical_val += other._numerical_val
@@ -103,6 +125,45 @@ class Unit(metaclass=UnitsMeta):
     def __add__(self, other: Unit) -> Unit:
         new_unit = self._clone()
         new_unit += other
+        return new_unit
+
+    def __neg__(self) -> Unit:
+        self._numerical_val = -self._numerical_val
+        return self
+
+    def __sub__(self, other: Unit) -> Unit:
+        return self + (- other)
+
+    def __ifloordiv__(self, other: Unit) -> Unit:
+        assert self._is_matching_dimensions(other)
+        self._dimensions = list()
+        self._numerical_val = math.floor(self._numerical_val / other._numerical_val)  # type: ignore
+        return self
+
+    def __floordiv__(self, other: Unit) -> Unit:
+        new_unit = self._clone()
+        new_unit //= other
+        return new_unit
+
+    def __itruediv__(self, other: Unit) -> Unit:
+        assert self._is_matching_dimensions(other)
+        self._dimensions = list()
+        self._numerical_val /= other._numerical_val
+        return self
+
+    def __truediv__(self, other: Unit) -> Unit:
+        new_unit = self._clone()
+        new_unit /= other
+        return new_unit
+
+    def __imod__(self, other: Unit) -> Unit:
+        assert self._is_matching_dimensions(other)
+        self._numerical_val %= other._numerical_val  # type: ignore
+        return self
+
+    def __mod__(self, other: Unit) -> Unit:
+        new_unit = self._clone()
+        new_unit %= other
         return new_unit
 
 
