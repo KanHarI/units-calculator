@@ -6,7 +6,7 @@ class UnitsMeta(type):
     """A metaclass for all unit classes"""
 
     def __new__(
-        mcs: type,
+        cls: type,
         name: str,
         bases: tuple[type, ...],
         namespace: dict[str, Any],
@@ -14,4 +14,4 @@ class UnitsMeta(type):
         **kwargs
     ):
         """Check required attributes exists in unit class"""
-        return super().__new__(mcs, name, bases, namespace, *args, **kwargs)  # type: ignore
+        return super().__new__(cls, name, bases, namespace, *args, **kwargs)  # type: ignore

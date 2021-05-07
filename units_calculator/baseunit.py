@@ -4,4 +4,6 @@ from units_calculator.units_meta import UnitsMeta
 
 
 class BaseUnit(metaclass=UnitsMeta):
-    pass
+    """A class for base units"""
+
+    __base_unit__: bool = True
