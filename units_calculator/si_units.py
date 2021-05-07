@@ -1,7 +1,7 @@
 """A module for SI units definition.
 See https://en.wikipedia.org/wiki/International_System_of_Units"""
 
-from units_calculator.baseunit import BaseUnit
+from units_calculator.units_bases import BaseUnit
 
 
 class Seconds(BaseUnit):
