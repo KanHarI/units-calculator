@@ -43,9 +43,13 @@ class Unit(metaclass=UnitsMeta):
         self._dimensions: Dimensions = dimensions
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
-        if len(self._dimensions) != len(other._dimensions):
+        if len(self._dimensions) != len(
+            other._dimensions
+        ):  # pylint: disable=protected-access
             return False
-        for dimension1, dimension2 in zip(self._dimensions, other._dimensions):
+        for dimension1, dimension2 in zip(
+            self._dimensions, other._dimensions
+        ):  # pylint: disable=protected-access
             idx1, exp1, _ = dimension1
             idx2, exp2, _ = dimension2
             if (idx1, exp1) != (idx2, exp2):
@@ -71,7 +75,9 @@ class Unit(metaclass=UnitsMeta):
         for _, exp, unit in self._dimensions:
             units_representation += unit.__symbol__
             if exp != 1:
-                units_representation += f"^{str(exp) if exp>0 else '(' + str(exp) + ')'}"
+                units_representation += (
+                    f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
+                )
         return numerical_representation + units_representation
 
 
