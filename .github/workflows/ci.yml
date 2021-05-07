@@ -1,0 +1,62 @@
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U . -r dev-requirements.txt
+    - run: python -m pylint units_calculator setup.py
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m mypy units_calculator tests setup.py
+
+  black:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m black --check units_calculator tests setup.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m pytest tests
+
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m isort --profile black --check units_calculator tests setup.py
