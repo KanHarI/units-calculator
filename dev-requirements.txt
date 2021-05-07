@@ -1,0 +1,9 @@
+autoflake
+black
+icecream
+ipython
+isort
+mypy
+pyinstaller
+pylint
+pytest
