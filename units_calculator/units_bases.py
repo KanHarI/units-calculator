@@ -39,17 +39,17 @@ class Unit(metaclass=UnitsMeta):
     """A base class for all units"""
 
     def __init__(self, numerical_val: complex, dimensions: Dimensions):
-        self._numerical_val: complex = numerical_val
         self._dimensions: Dimensions = dimensions
+        self._numerical_val: complex = numerical_val * self.units_factor
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
-            other._dimensions
-        ):  # pylint: disable=protected-access
+            other._dimensions  # pylint: disable=protected-access
+        ):
             return False
         for dimension1, dimension2 in zip(
-            self._dimensions, other._dimensions
-        ):  # pylint: disable=protected-access
+            self._dimensions, other._dimensions  # pylint: disable=protected-access
+        ):
             idx1, exp1, _ = dimension1
             idx2, exp2, _ = dimension2
             if (idx1, exp1) != (idx2, exp2):
@@ -59,26 +59,51 @@ class Unit(metaclass=UnitsMeta):
     def _clone(self) -> Unit:
         return Unit(self._numerical_val, self._dimensions)
 
+    @property
+    def units_string(self) -> str:
+        """Return string representation of units"""
+        units_representation_parts: list[str] = list()
+        for _, exp, unit in self._dimensions:
+            units_representation_atom = unit.__symbol__  # type: ignore
+            if exp != 1:
+                units_representation_atom += (
+                    f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
+                )
+            units_representation_parts.append(units_representation_atom)
+        return "*".join(units_representation_parts)
+
+    @property
+    def units_factor(self) -> complex:
+        """Get units factor to base unit"""
+        units_factor = 1
+        for _, exp, unit in self._dimensions:
+            units_factor *= unit.__multiplier__ ** exp  # type: ignore
+        return units_factor
+
+    @property
+    def val(self) -> complex:
+        """Get current unit numerical value"""
+        return self._numerical_val / self.units_factor
+
+    @property
+    def base_units_val(self):
+        """Return value in base units"""
+        return self._numerical_val
+
+    def __repr__(self):
+        numerical_representation = repr(self.val)
+        units_representation = self.units_string
+        return numerical_representation + units_representation
+
     def __iadd__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
         self._numerical_val += other._numerical_val
         return self
 
     def __add__(self, other: Unit) -> Unit:
-        new_unit = Unit(self._numerical_val, self._dimensions)
+        new_unit = self._clone()
         new_unit += other
         return new_unit
-
-    def __repr__(self):
-        numerical_representation = repr(self._numerical_val)
-        units_representation = ""
-        for _, exp, unit in self._dimensions:
-            units_representation += unit.__symbol__
-            if exp != 1:
-                units_representation += (
-                    f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
-                )
-        return numerical_representation + units_representation
 
 
 class BaseUnit(Unit):
@@ -102,6 +127,8 @@ class DerivedUnit(Unit):
 
 class Number(Unit):
     """A class for unitless numbers"""
+
+    __multiplier__: complex = 1
 
     def __init__(self, numerical_val: complex):
         super().__init__(numerical_val, list())

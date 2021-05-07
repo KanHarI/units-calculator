@@ -17,7 +17,11 @@ def test_create_direct_unit():
 def test_add_units():
     s1 = Seconds(4.0)
     s2 = Seconds(3)
-    assert repr(s1 + s2) == "7.0s"
+    s3 = Seconds(5)
+    _sum = s1 + s2
+    assert repr(_sum) == "7.0s"
+    _sum += s3
+    assert _sum.val == 12.0
 
 
 def test_add_unit_and_number():
