@@ -13,7 +13,7 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - run: python -m pip install -U pip wheel cython setuptools
+    - run: python -m pip install -U pip setuptools
     - run: python -m pip install -U . -r dev-requirements.txt
     - run: python -m pylint units_calculator setup.py
 
@@ -24,8 +24,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - run: python -m pip install -U pip wheel cython setuptools
-    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m pip install -U pip setuptools
+    - run: python -m pip install -U . -r dev-requirements.txt
     - run: python -m mypy units_calculator tests setup.py
 
   black:
@@ -35,8 +35,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - run: python -m pip install -U pip wheel cython setuptools
-    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m pip install -U pip setuptools
+    - run: python -m pip install -U . -r dev-requirements.txt
     - run: python -m black --check units_calculator tests setup.py
 
   test:
@@ -46,8 +46,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - run: python -m pip install -U pip wheel cython setuptools
-    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m pip install -U pip setuptools
+    - run: python -m pip install -U . -r dev-requirements.txt
     - run: python -m pytest tests
 
   isort:
@@ -57,6 +57,6 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.9
-    - run: python -m pip install -U pip wheel cython setuptools
-    - run: python -m pip install -U -r requirements.txt -r dev-requirements.txt
+    - run: python -m pip install -U pip setuptools
+    - run: python -m pip install -U . -r dev-requirements.txt
     - run: python -m isort --profile black --check units_calculator tests setup.py
