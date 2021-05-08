@@ -45,21 +45,23 @@ class UnitsMeta(type):
             src_dimensions: list[tuple[UnitsMeta, int]] = namespace["__base_units__"]
             dimensions = list()
             namespace["__dimensions__"] = dimensions
-            multiplier: complex = namespace["__multiplier__"]
+            multiplier: complex = namespace.get("__multiplier__", 1)
             dimensions_idx_dict: dict[int, Dimension] = dict()
             for src_dimension in src_dimensions:
-                src_unit, exp = src_dimension
+                src_unit, derived_exp = src_dimension
                 src_unit_dimensions: Dimensions = src_unit.__dimensions__
-                for idx, exp, base_unit in src_unit_dimensions:
+                for idx, source_exp, base_unit in src_unit_dimensions:
                     existing_dimension = dimensions_idx_dict.get(
                         idx, (idx, 0, base_unit)
                     )
                     existing_dimension = (
                         existing_dimension[0],
-                        existing_dimension[1] + exp,
+                        existing_dimension[1] + source_exp * derived_exp,
                         existing_dimension[2],
                     )
-                    multiplier *= src_unit.__acc_multiplier__ ** exp
+                    multiplier *= src_unit.__acc_multiplier__ ** (
+                        source_exp * derived_exp
+                    )
                     dimensions_idx_dict[idx] = existing_dimension
             namespace["__acc_multiplier__"] = multiplier
             dimension_idx_keys = list(dimensions_idx_dict.keys())
@@ -150,7 +152,7 @@ class Unit(metaclass=UnitsMeta):
                         base_dimensions_exps, unit_dimensions_exp, -i - 1
                     )
                 )
-                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                if next_unit_sum_dim_exp_squared >= current_sum_dim_exp_squared:
                     break
                 i += 1
                 current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
@@ -163,7 +165,7 @@ class Unit(metaclass=UnitsMeta):
                         base_dimensions_exps, unit_dimensions_exp, -i + 1
                     )
                 )
-                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                if next_unit_sum_dim_exp_squared >= current_sum_dim_exp_squared:
                     break
                 i -= 1
                 current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
