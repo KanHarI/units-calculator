@@ -59,7 +59,7 @@ class UnitsMeta(type):
                         existing_dimension[1] + exp,
                         existing_dimension[2],
                     )
-                    multiplier *= existing_dimension[1] ** exp
+                    multiplier *= src_unit.__acc_multiplier__ ** exp
                     dimensions_idx_dict[idx] = existing_dimension
             namespace["__acc_multiplier__"] = multiplier
             dimension_idx_keys = list(dimensions_idx_dict.keys())
@@ -97,8 +97,8 @@ class Unit(metaclass=UnitsMeta):
         preferred_units: list[UnitsMeta],
     ):
         self._dimensions: Dimensions = dimensions
-        self._numerical_val: complex = numerical_val * self.units_factor
         self._preferred_units = preferred_units
+        self._numerical_val: complex = numerical_val * self.units_factor
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
@@ -218,7 +218,7 @@ class Unit(metaclass=UnitsMeta):
     def units_factor(self) -> complex:
         """Get units factor to base unit"""
         units_factor: complex = 1
-        for _, exp, unit in self._dimensions:
+        for unit, exp in self.preferred_units_representation:
             units_factor *= unit.__acc_multiplier__ ** exp
         return units_factor
 
@@ -473,7 +473,6 @@ class DerivedUnit(Unit):
     __base_units__: list[tuple[UnitsMeta, int]]
 
     def __init__(self, numerical_val: complex):
-        numerical_val *= self.__acc_multiplier__
         super().__init__(numerical_val, self.__dimensions__, [self.__class__])
 
 
