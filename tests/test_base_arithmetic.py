@@ -1,7 +1,7 @@
 import pytest
 
-from units_calculator.si_units import Meters, Seconds
-from units_calculator.units_bases import Number
+from units_calculator.base_units.si_units import Meters, Seconds
+from units_calculator.engine.units_bases import Number
 
 
 def test_create_unitless_number() -> None:

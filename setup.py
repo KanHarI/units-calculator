@@ -6,4 +6,9 @@ __version__ = "1.0.0"
 
 packages = find_packages(exclude=["tests"])
 
-setup(name="UnitsCalculator", version=__version__, packages=find_packages())
+setup(
+    name="UnitsCalculator",
+    version=__version__,
+    package_data={package: ["py.typed"] for package in packages},
+    packages=find_packages(),
+)
