@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import copy
 import math
-from typing import Any, Type, cast, Optional, Union
+from typing import Any, Optional, Type, Union, cast
 
 
 class UnitsMeta(type):
     """A metaclass for all unit classes"""
 
     def __new__(
-            cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
+        cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
     ) -> UnitsMeta:
         """Check required attributes exists in unit class"""
-        symbol = namespace["__symbol__"] if "__symbol__" in namespace else None
+        symbol: Optional[str] = (
+            namespace["__symbol__"] if "__symbol__" in namespace else None
+        )
+        if symbol is None:
+            return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
+        assert symbol.isalpha()
         is_base_unit = symbol is not None and BaseUnit in bases
         if symbol in dimensions_dict:
             raise RuntimeError(f"{symbol} defined twice!")
@@ -46,11 +52,11 @@ class Unit(metaclass=UnitsMeta):
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
-                other._dimensions  # pylint: disable=protected-access
+            other._dimensions  # pylint: disable=protected-access
         ):
             return False
         for dimension1, dimension2 in zip(
-                self._dimensions, other._dimensions  # pylint: disable=protected-access
+            self._dimensions, other._dimensions  # pylint: disable=protected-access
         ):
             idx1, exp1, _ = dimension1
             idx2, exp2, _ = dimension2
@@ -59,7 +65,7 @@ class Unit(metaclass=UnitsMeta):
         return True
 
     def _clone(self) -> Unit:
-        return Unit(self._numerical_val, self._dimensions)
+        return Unit(self._numerical_val, copy.deepcopy(self._dimensions))
 
     @property
     def units_string(self) -> str:
@@ -133,7 +139,7 @@ class Unit(metaclass=UnitsMeta):
         return self
 
     def __sub__(self, other: Unit) -> Unit:
-        return self + (- other)
+        return self + (-other)
 
     def __ifloordiv__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
@@ -149,13 +155,17 @@ class Unit(metaclass=UnitsMeta):
     def _itruediv_unit(self, other: Unit) -> Unit:
         it1, it2 = 0, 0
         result_dimensions: Dimensions = list()
-        while it1 < len(self._dimensions) or it2 < len(other._dimensions):
+        while it1 < len(
+            self._dimensions  # pylint: disable=protected-access
+        ) or it2 < len(
+            other._dimensions  # pylint: disable=protected-access
+        ):
             d1: Optional[Dimension] = None
             d2: Optional[Dimension] = None
             if it1 < len(self._dimensions):
                 d1 = self._dimensions[it1]
-            if it2 < len(other._dimensions):
-                d2 = other._dimensions[it2]
+            if it2 < len(other._dimensions):  # pylint: disable=protected-access
+                d2 = other._dimensions[it2]  # pylint: disable=protected-access
             if d1 is not None and d2 is not None:
                 if d1[0] == d2[0]:
                     if d1[1] != d2[1]:  # Remove dimensions with exponent 0
@@ -177,7 +187,7 @@ class Unit(metaclass=UnitsMeta):
             else:
                 raise RuntimeError("Bad dimensionality unit")
         self._dimensions = result_dimensions
-        self._numerical_val /= other._numerical_val
+        self._numerical_val /= other._numerical_val  # pylint: disable=protected-access
         return self
 
     def __itruediv__(self, other: Union[Unit, complex]) -> Unit:
@@ -192,6 +202,9 @@ class Unit(metaclass=UnitsMeta):
         new_unit /= other
         return new_unit
 
+    def __rtruediv__(self, other: complex) -> Unit:
+        return Number(other) / self
+
     def __imod__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
         self._numerical_val %= other._numerical_val  # type: ignore
@@ -201,6 +214,92 @@ class Unit(metaclass=UnitsMeta):
         new_unit = self._clone()
         new_unit %= other
         return new_unit
+
+    def _imul_unit(self, other: Unit) -> Unit:
+        it1, it2 = 0, 0
+        result_dimensions: Dimensions = list()
+        while it1 < len(
+            self._dimensions
+        ) or it2 < len(  # pylint: disable=protected-access
+            other._dimensions  # pylint: disable=protected-access
+        ):
+            d1: Optional[Dimension] = None
+            d2: Optional[Dimension] = None
+            if it1 < len(self._dimensions):
+                d1 = self._dimensions[it1]
+            if it2 < len(other._dimensions):  # pylint: disable=protected-access
+                d2 = other._dimensions[it2]  # pylint: disable=protected-access
+            if d1 is not None and d2 is not None:
+                if d1[0] == d2[0]:
+                    if d1[1] != -d2[1]:  # Remove dimensions with exponent 0
+                        result_dimensions.append((d1[0], d1[1] + d2[1], d1[2]))
+                    it1 += 1
+                    it2 += 1
+                elif d1[0] < d2[0]:
+                    result_dimensions.append(d1)
+                    it1 += 1
+                else:
+                    result_dimensions.append(d2)
+                    it2 += 1
+            elif d1 is not None:
+                result_dimensions.append(d1)
+                it1 += 1
+            elif d2 is not None:
+                result_dimensions.append(d2)
+                it2 += 1
+            else:
+                raise RuntimeError("Bad dimensionality unit")
+        self._dimensions = result_dimensions
+        self._numerical_val *= other._numerical_val  # pylint: disable=protected-access
+        return self
+
+    def __imul__(self, other: Union[Unit, complex]):
+        if isinstance(other, Unit):
+            return self._imul_unit(other)
+        else:
+            self._numerical_val *= other
+            return self
+
+    def __mul__(self, other: Union[Unit, complex]) -> Unit:
+        new_unit = self._clone()
+        new_unit *= other
+        return new_unit
+
+    def __rmul__(self, other: complex) -> Unit:
+        return Number(other) * self
+
+    def _ipow_unit(self, other: Unit):
+        # Exponent should be dimensionless
+        assert len(other._dimensions) == 0  # pylint: disable=protected-access
+        self **= other._numerical_val  # pylint: disable=protected-access
+        return self
+
+    def __ipow__(self, other: Union[Unit, complex]) -> Unit:
+        if isinstance(other, Unit):
+            return self._ipow_unit(other)
+        else:
+            if len(self._dimensions) > 0:
+                exponent = int(math.floor(other))  # type: ignore
+                assert exponent == other
+            else:
+                exponent = other  # type: ignore
+            self._numerical_val **= exponent
+            if len(self._dimensions) > 0:
+                for i in range(len(self._dimensions)):
+                    d: Dimension = self._dimensions[i]
+                    d = (d[0], int(d[1] * exponent), d[2])
+                    self._dimensions[i] = d
+            return self
+
+    def __pow__(self, other: Union[Unit, complex]) -> Unit:
+        new_unit = self._clone()
+        new_unit **= other
+        return new_unit
+
+    def __rpow__(self, other: complex) -> Unit:
+        # Exponent must be dimensionless
+        assert len(self._dimensions) == 0
+        return Number(other) ** self
 
 
 class BaseUnit(Unit):
