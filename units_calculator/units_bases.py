@@ -273,6 +273,7 @@ class Unit(metaclass=UnitsMeta):
     def __add__(self, other: Unit) -> Unit:
         new_unit = self._clone()
         new_unit += other
+        self._mrege_preferences(other)
         return new_unit
 
     def __neg__(self) -> Unit:
@@ -286,6 +287,7 @@ class Unit(metaclass=UnitsMeta):
         assert self._is_matching_dimensions(other)
         self._dimensions = list()
         self._numerical_val = math.floor(self._numerical_val / other._numerical_val)  # type: ignore
+        self._mrege_preferences(other)
         return self
 
     def __floordiv__(self, other: Unit) -> Unit:
@@ -329,6 +331,7 @@ class Unit(metaclass=UnitsMeta):
                 raise RuntimeError("Bad dimensionality unit")
         self._dimensions = result_dimensions
         self._numerical_val /= other._numerical_val  # pylint: disable=protected-access
+        self._mrege_preferences(other)
         return self
 
     def __itruediv__(self, other: Union[Unit, complex]) -> Unit:
@@ -344,11 +347,14 @@ class Unit(metaclass=UnitsMeta):
         return new_unit
 
     def __rtruediv__(self, other: complex) -> Unit:
-        return Number(other) / self
+        result = Number(other) / self
+        result._mrege_preferences(self)
+        return result
 
     def __imod__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
         self._numerical_val %= other._numerical_val  # type: ignore
+        self._mrege_preferences(other)
         return self
 
     def __mod__(self, other: Unit) -> Unit:
@@ -392,6 +398,7 @@ class Unit(metaclass=UnitsMeta):
                 raise RuntimeError("Bad dimensionality unit")
         self._dimensions = result_dimensions
         self._numerical_val *= other._numerical_val  # pylint: disable=protected-access
+        self._mrege_preferences(other)
         return self
 
     def __imul__(self, other: Union[Unit, complex]) -> Unit:
@@ -407,12 +414,15 @@ class Unit(metaclass=UnitsMeta):
         return new_unit
 
     def __rmul__(self, other: complex) -> Unit:
-        return Number(other) * self
+        result = Number(other) * self
+        result._mrege_preferences(self)
+        return result
 
     def _ipow_unit(self, other: Unit) -> Unit:
         # Exponent should be dimensionless
         assert len(other._dimensions) == 0  # pylint: disable=protected-access
         self **= other._numerical_val  # pylint: disable=protected-access
+        self._mrege_preferences(other)
         return self
 
     def __ipow__(self, other: Union[Unit, complex]) -> Unit:
@@ -444,7 +454,9 @@ class Unit(metaclass=UnitsMeta):
     def __rpow__(self, other: complex) -> Unit:
         # Exponent must be dimensionless
         assert len(self._dimensions) == 0
-        return Number(other) ** self
+        result = Number(other) ** self
+        result._mrege_preferences(self)
+        return result
 
 
 class BaseUnit(Unit):
