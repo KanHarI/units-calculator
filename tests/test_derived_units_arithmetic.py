@@ -1,5 +1,6 @@
 from units_calculator.derived_units.area_units import SquareCentimeters, SquareMeters
-from units_calculator.derived_units.mass_units import Milligrams
+from units_calculator.derived_units.chemistry_units import Millimolars
+from units_calculator.derived_units.mass_units import Grams, Milligrams
 from units_calculator.derived_units.time_units import Milliseconds
 from units_calculator.derived_units.volume_units import (
     CubicCentimeters,
@@ -7,7 +8,7 @@ from units_calculator.derived_units.volume_units import (
     Millilitres,
     USQuarts,
 )
-from units_calculator.si_units.si_units import Meters, Seconds
+from units_calculator.si_units.si_units import Meters, Mols, Seconds
 
 
 def test_create_derived_unit() -> None:
@@ -46,3 +47,13 @@ def test_multiple_pathways_to_same_unit() -> None:
 
 def test_us_units() -> None:
     assert 57 < USQuarts(1) / CubicInches(1) < 58
+
+
+def test_negative_dimensions_units() -> None:
+    mass = Grams(10)
+    molar_mass = Grams(294.31) / Mols(1)
+    mols = mass / molar_mass
+    assert Mols(0.033) < mols < Mols(0.034)
+    volume = Millilitres(20)
+    concentraion = mols / volume
+    assert 1.69 < (concentraion / Millimolars(1)) < 1.7
