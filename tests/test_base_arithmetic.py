@@ -67,3 +67,4 @@ def test_div_mixed():
     assert (s1 / 2).val == 7.0 / 2
     m1 = Meters(3.0)
     assert repr(m1 / s1) == repr(3 / 7) + "m*s^(-1)"
+    assert repr(s1 / m1) == repr(7 / 3) + "m^(-1)*s"

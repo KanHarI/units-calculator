@@ -172,7 +172,7 @@ class Unit(metaclass=UnitsMeta):
                 result_dimensions.append(d1)
                 it1 += 1
             elif d2 is not None:
-                result_dimensions.append(d2)
+                result_dimensions.append((d2[0], -d2[1], d2[2]))
                 it2 += 1
             else:
                 raise RuntimeError("Bad dimensionality unit")
