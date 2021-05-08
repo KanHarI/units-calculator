@@ -11,7 +11,7 @@ class UnitsMeta(type):
     """A metaclass for all unit classes"""
 
     def __new__(
-        cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
+            cls: Type[UnitsMeta], name: str, bases: tuple, namespace: dict[str, Any]
     ) -> UnitsMeta:
         """Check required attributes exists in unit class"""
         symbol: Optional[str] = (
@@ -21,21 +21,45 @@ class UnitsMeta(type):
             return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
         assert symbol.isalpha()
         is_base_unit = symbol is not None and BaseUnit in bases
+        is_derived_unit = symbol is not None and DerivedUnit in bases
         if symbol in dimensions_dict:
             raise RuntimeError(f"{symbol} defined twice!")
         if is_base_unit:
             idx = len(dimensions_dict)
-            namespace["__dimensions__"] = list()
+            dimensions: Dimensions = list()
+            namespace["__dimensions__"] = dimensions
             result = cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
-            namespace["__dimensions__"].append((idx, 1, result))
+            dimensions.append((idx, 1, result))
             dimensions_dict[symbol] = idx, result
             idx_to_dimension[idx] = symbol, result
+        elif is_derived_unit:
+            src_dimensions: list[tuple[UnitsMeta, int]] = namespace["__base_units__"]
+            dimensions: Dimensions = list()
+            namespace["__dimensions__"] = dimensions
+            result = cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
+            dimensions_idx_dict: dict[int, Dimension] = dict()
+            for src_dimension in src_dimensions:
+                src_unit, exp = src_dimension
+                src_unit_dimensions: Dimensions = src_unit.__dimensions__  # type: ignore
+                for idx, exp, base_unit in src_unit_dimensions:
+                    if idx in dimensions_idx_dict:
+                        existing_dimension = dimensions_idx_dict[idx]
+                    else:
+                        existing_dimension = (idx, 0, base_unit)
+                    existing_dimension = (existing_dimension[0], existing_dimension[1] + exp, existing_dimension[2])
+                    dimensions_idx_dict[idx] = existing_dimension
+            dimension_idx_keys = list(dimensions_idx_dict.keys())
+            dimension_idx_keys.sort()
+            for idx in dimension_idx_keys:
+                _, exp, base_unit = dimensions_idx_dict[idx]
+                if exp != 0:
+                    dimensions.append((idx, exp, base_unit))
         else:
             result = cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
         return result
 
 
-dimensions_dict: dict[str, tuple[int, UnitsMeta]] = dict()
+dimensions_dict: dict[str, tuple[Optional[int], UnitsMeta]] = dict()
 idx_to_dimension: dict[int, tuple[str, UnitsMeta]] = dict()
 
 # A list of dimensions and their exponents
@@ -46,17 +70,18 @@ Dimensions = list[tuple[int, int, UnitsMeta]]
 class Unit(metaclass=UnitsMeta):
     """A base class for all units"""
 
-    def __init__(self, numerical_val: complex, dimensions: Dimensions):
+    def __init__(self, numerical_val: complex, dimensions: Dimensions, preferred_units: list[UnitsMeta]):
         self._dimensions: Dimensions = dimensions
         self._numerical_val: complex = numerical_val * self.units_factor
+        self._preferred_units = preferred_units
 
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
-            other._dimensions  # pylint: disable=protected-access
+                other._dimensions  # pylint: disable=protected-access
         ):
             return False
         for dimension1, dimension2 in zip(
-            self._dimensions, other._dimensions  # pylint: disable=protected-access
+                self._dimensions, other._dimensions  # pylint: disable=protected-access
         ):
             idx1, exp1, _ = dimension1
             idx2, exp2, _ = dimension2
@@ -65,7 +90,7 @@ class Unit(metaclass=UnitsMeta):
         return True
 
     def _clone(self) -> Unit:
-        return Unit(self._numerical_val, copy.deepcopy(self._dimensions))
+        return Unit(self._numerical_val, copy.deepcopy(self._dimensions), copy.deepcopy(self._preferred_units))
 
     @property
     def units_string(self) -> str:
@@ -156,7 +181,7 @@ class Unit(metaclass=UnitsMeta):
         it1, it2 = 0, 0
         result_dimensions: Dimensions = list()
         while it1 < len(
-            self._dimensions  # pylint: disable=protected-access
+                self._dimensions  # pylint: disable=protected-access
         ) or it2 < len(
             other._dimensions  # pylint: disable=protected-access
         ):
@@ -219,7 +244,7 @@ class Unit(metaclass=UnitsMeta):
         it1, it2 = 0, 0
         result_dimensions: Dimensions = list()
         while it1 < len(
-            self._dimensions
+                self._dimensions
         ) or it2 < len(  # pylint: disable=protected-access
             other._dimensions  # pylint: disable=protected-access
         ):
@@ -310,15 +335,20 @@ class BaseUnit(Unit):
     __multiplier__: complex = 1
 
     def __init__(self, numerical_val: complex):
-        super().__init__(numerical_val, self.__dimensions__)
+        super().__init__(numerical_val, self.__dimensions__, [self.__class__])
 
 
 class DerivedUnit(Unit):
     """A base class for derived units"""
 
-    __base_unit__: Type[UnitsMeta]
+    __dimensions__: Dimensions
     __symbol__: str
     __multiplier__: complex
+    __base_units__: list[tuple[UnitsMeta, int]]
+
+    def __init__(self, numerical_val: complex):
+        numerical_val *= self.__multiplier__
+        super().__init__(numerical_val, self.__dimensions__, [self.__class__])
 
 
 class Number(Unit):
@@ -327,4 +357,4 @@ class Number(Unit):
     __multiplier__: complex = 1
 
     def __init__(self, numerical_val: complex):
-        super().__init__(numerical_val, list())
+        super().__init__(numerical_val, list(), [self.__class__])
