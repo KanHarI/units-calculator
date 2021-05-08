@@ -1,7 +1,5 @@
-import math
-
 from units_calculator.base_units.si_units import Meters, Seconds
-from units_calculator.derived_units.area_units import SquaredMeters
+from units_calculator.derived_units.area_units import SquareMeters, SquareCentimeters
 from units_calculator.derived_units.mass_units import Milligrams
 from units_calculator.derived_units.time_units import Milliseconds
 
@@ -25,7 +23,12 @@ def test_add_mixed_units() -> None:
 
 
 def test_higher_dimensionality_units() -> None:
-    a1 = SquaredMeters(2)
+    a1 = SquareMeters(2)
     l1 = Meters(4)
     assert repr(a1) == "2.0m2"
     assert repr(a1 / l1) == "0.5m"
+
+
+def test_high_dimensional_scaled_units() -> None:
+    a1 = SquareCentimeters(50)
+    assert repr(a1.as_base_units()) == "0.005m^2"
