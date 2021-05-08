@@ -1,6 +1,5 @@
 """A module for volume units"""
 
-from units_calculator.base_units.si_units import Meters
 from units_calculator.derived_units.length_units import (
     Centimeters,
     Decimeters,
@@ -8,6 +7,7 @@ from units_calculator.derived_units.length_units import (
     Yards,
 )
 from units_calculator.engine.engine import DerivedUnit
+from units_calculator.si_units.si_units import Meters
 
 
 class CubicMeters(DerivedUnit):

@@ -1,7 +1,7 @@
 """A module containing weight unit definitions"""
 
-from units_calculator.base_units.si_units import Kilograms
 from units_calculator.engine.engine import DerivedUnit
+from units_calculator.si_units.si_units import Kilograms
 
 
 class Grams(DerivedUnit):

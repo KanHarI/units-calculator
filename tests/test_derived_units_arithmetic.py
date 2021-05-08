@@ -1,4 +1,3 @@
-from units_calculator.base_units.si_units import Meters, Seconds
 from units_calculator.derived_units.area_units import SquareCentimeters, SquareMeters
 from units_calculator.derived_units.mass_units import Milligrams
 from units_calculator.derived_units.time_units import Milliseconds
@@ -8,6 +7,7 @@ from units_calculator.derived_units.volume_units import (
     Millilitres,
     USQuarts,
 )
+from units_calculator.si_units.si_units import Meters, Seconds
 
 
 def test_create_derived_unit() -> None:
