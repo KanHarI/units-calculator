@@ -67,7 +67,7 @@ def test_div_mixed() -> None:
     assert (s1 / 2).val == 7.0 / 2
     m1 = Meters(3.0)
     assert repr(m1 / s1) == repr(3 / 7) + "m*s^(-1)"
-    assert repr(s1 / m1) == repr(7 / 3) + "m^(-1)*s"
+    assert repr(s1 / m1) == repr(7 / 3) + "s*m^(-1)"
     assert repr(14 / s1) == "2.0s^(-1)"
 
 
@@ -81,7 +81,9 @@ def test_mul_units() -> None:
     s1 = Seconds(2.0)
     assert repr(s1 * s1) == "4.0s^2"
     m1 = Meters(7)
-    assert repr(s1 * m1) == "14.0m*s"
+    assert repr(s1 * m1) == "14.0s*m"
+    assert repr(m1 * s1) == "14.0m*s"
+    assert s1 * m1 == m1 * s1
     assert repr(3 * m1) == "21.0m"
 
 

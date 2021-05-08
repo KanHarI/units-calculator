@@ -122,16 +122,96 @@ class Unit(metaclass=UnitsMeta):
         )
 
     @property
+    def preferred_units_representation(self) -> list[tuple[UnitsMeta, int]]:
+        """Returns preferred units for current unit dimensionality"""
+
+        def _sum_dim_exp_squared(dimensions_exps: dict[int, int]) -> int:
+            return sum(val ** 2 for val in dimensions_exps.values())
+
+        def _add_n_unit_to_dimension(
+            base_dimensions_exps: dict[int, int],
+            unit_dimensions_exp: dict[int, int],
+            n: int,
+        ) -> dict[int, int]:
+            return {
+                idx: base_dimensions_exps[idx] + n * unit_dimensions_exp[idx]
+                for idx in base_dimensions_exps.keys()
+            }
+
+        def _find_best_unit_exp(
+            base_dimensions_exps: dict[int, int], unit_dimensions_exp: dict[int, int]
+        ) -> int:
+            current_sum_dim_exp_squared = _sum_dim_exp_squared(base_dimensions_exps)
+            i = 0
+            while True:
+                next_unit_sum_dim_exp_squared = _sum_dim_exp_squared(
+                    _add_n_unit_to_dimension(
+                        base_dimensions_exps, unit_dimensions_exp, -i - 1
+                    )
+                )
+                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                    break
+                i += 1
+                current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
+            if i > 0:
+                return i
+            i = 0
+            while True:
+                next_unit_sum_dim_exp_squared = _sum_dim_exp_squared(
+                    _add_n_unit_to_dimension(
+                        base_dimensions_exps, unit_dimensions_exp, -i + 1
+                    )
+                )
+                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                    break
+                i -= 1
+                current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
+            return i
+
+        result: list[tuple[UnitsMeta, int]] = list()
+        remaining_dimensions: dict[int, int] = {
+            idx: exp for idx, exp, _ in self._dimensions
+        }
+        for preferred_unit in self._preferred_units:
+            preferred_unit_dimensions: dict[int, int] = {
+                idx: exp for idx, exp, _ in preferred_unit.__dimensions__
+            }
+            for idx in remaining_dimensions.keys():
+                if idx not in preferred_unit_dimensions:
+                    preferred_unit_dimensions[idx] = 0
+            for idx in preferred_unit_dimensions.keys():
+                if idx not in remaining_dimensions:
+                    remaining_dimensions[idx] = 0
+            unit_exp = _find_best_unit_exp(
+                remaining_dimensions, preferred_unit_dimensions
+            )
+            if unit_exp != 0:
+                result.append((preferred_unit, unit_exp))
+                remaining_dimensions = _add_n_unit_to_dimension(
+                    remaining_dimensions, preferred_unit_dimensions, -unit_exp
+                )
+        idxs_to_pop: list[int] = list()
+        for idx, exp in remaining_dimensions.items():
+            if exp == 0:
+                idxs_to_pop.append(idx)
+        for idx in idxs_to_pop:
+            remaining_dimensions.pop(idx)
+        # Fill in remaining base dimensions
+        for idx, _, _ in self._dimensions[::-1]:  # start with least common units
+            if idx not in remaining_dimensions:
+                continue
+            result.append((idx_to_dimension[idx][1], remaining_dimensions[idx]))
+        return result
+
+    @property
     def units_string(self) -> str:
         """Return string representation of units"""
         units_representation_parts: list[str] = list()
-        for _, exp, unit in self._dimensions[::-1]:  # start with least common units
-            units_representation_atom = unit.__symbol__
+        for unit, exp in self.preferred_units_representation:
+            units_symbol: str = unit.__symbol__
             if exp != 1:
-                units_representation_atom += (
-                    f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
-                )
-            units_representation_parts.append(units_representation_atom)
+                units_symbol += f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
+            units_representation_parts.append(units_symbol)
         return "*".join(units_representation_parts)
 
     @property
@@ -388,5 +468,7 @@ class DerivedUnit(Unit):
 class Number(Unit):
     """A class for unitless numbers"""
 
+    __dimensions__: Dimensions = list()
+
     def __init__(self, numerical_val: complex):
-        super().__init__(numerical_val, list(), [self.__class__])
+        super().__init__(numerical_val, list(), list())
