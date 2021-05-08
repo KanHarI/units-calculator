@@ -27,7 +27,8 @@ class UnitsMeta(type):
         )
         if symbol is None:
             return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
-        assert all(character not in ["0123456789.-+"] for character in symbol)
+        assert symbol[0] not in "0123456789e.-+ "
+        assert all(character not in ".-+ " for character in symbol)
         is_base_unit = symbol is not None and BaseUnit in bases
         is_derived_unit = symbol is not None and DerivedUnit in bases
         if symbol in dimensions_dict:
@@ -59,9 +60,7 @@ class UnitsMeta(type):
                         existing_dimension[1] + source_exp * derived_exp,
                         existing_dimension[2],
                     )
-                    multiplier *= src_unit.__acc_multiplier__ ** (
-                        source_exp * derived_exp
-                    )
+                    multiplier *= src_unit.__acc_multiplier__ ** derived_exp
                     dimensions_idx_dict[idx] = existing_dimension
             namespace["__acc_multiplier__"] = multiplier
             dimension_idx_keys = list(dimensions_idx_dict.keys())
