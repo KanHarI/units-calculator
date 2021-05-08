@@ -1,6 +1,6 @@
 import pytest
 
-from units_calculator.si_units import Seconds
+from units_calculator.si_units import Seconds, Meters
 from units_calculator.units_bases import Number
 
 
@@ -57,4 +57,13 @@ def test_div_units():
     s1 = Seconds(7.0)
     s2 = Seconds(3.0)
     assert (s1 // s2).val == 2
+    assert repr(s1 // s2) == "2.0"
     assert (s1 / s2).val == 7 / 3
+    assert repr(s1 / s2) == repr(7 / 3)
+
+
+def test_div_mixed():
+    s1 = Seconds(7.0)
+    assert (s1 / 2).val == 7.0 / 2
+    m1 = Meters(3.0)
+    assert repr(m1 / s1) == repr(3 / 7) + "m*s^(-1)"

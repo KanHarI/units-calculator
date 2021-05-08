@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Type, cast
+from typing import Any, Type, cast, Optional, Union
 
 
 class UnitsMeta(type):
@@ -33,6 +33,7 @@ dimensions_dict: dict[str, tuple[int, UnitsMeta]] = dict()
 idx_to_dimension: dict[int, tuple[str, UnitsMeta]] = dict()
 
 # A list of dimensions and their exponents
+Dimension = tuple[int, int, UnitsMeta]
 Dimensions = list[tuple[int, int, UnitsMeta]]
 
 
@@ -64,7 +65,7 @@ class Unit(metaclass=UnitsMeta):
     def units_string(self) -> str:
         """Return string representation of units"""
         units_representation_parts: list[str] = list()
-        for _, exp, unit in self._dimensions:
+        for _, exp, unit in self._dimensions[::-1]:  # start with least common units
             units_representation_atom = unit.__symbol__  # type: ignore
             if exp != 1:
                 units_representation_atom += (
@@ -145,13 +146,48 @@ class Unit(metaclass=UnitsMeta):
         new_unit //= other
         return new_unit
 
-    def __itruediv__(self, other: Unit) -> Unit:
-        assert self._is_matching_dimensions(other)
-        self._dimensions = list()
+    def _itruediv_unit(self, other: Unit) -> Unit:
+        it1, it2 = 0, 0
+        result_dimensions: Dimensions = list()
+        while it1 < len(self._dimensions) or it2 < len(other._dimensions):
+            d1: Optional[Dimension] = None
+            d2: Optional[Dimension] = None
+            if it1 < len(self._dimensions):
+                d1 = self._dimensions[it1]
+            if it2 < len(other._dimensions):
+                d2 = other._dimensions[it2]
+            if d1 is not None and d2 is not None:
+                if d1[0] == d2[0]:
+                    if d1[1] != d2[1]:  # Remove dimensions with exponent 0
+                        result_dimensions.append((d1[0], d1[1] - d2[1], d1[2]))
+                    it1 += 1
+                    it2 += 1
+                elif d1[0] < d2[0]:
+                    result_dimensions.append(d1)
+                    it1 += 1
+                else:
+                    result_dimensions.append((d2[0], -d2[1], d2[2]))
+                    it2 += 1
+            elif d1 is not None:
+                result_dimensions.append(d1)
+                it1 += 1
+            elif d2 is not None:
+                result_dimensions.append(d2)
+                it2 += 1
+            else:
+                raise RuntimeError("Bad dimensionality unit")
+        self._dimensions = result_dimensions
         self._numerical_val /= other._numerical_val
         return self
 
-    def __truediv__(self, other: Unit) -> Unit:
+    def __itruediv__(self, other: Union[Unit, complex]) -> Unit:
+        if isinstance(other, Unit):
+            return self._itruediv_unit(other)
+        else:
+            self._numerical_val /= other
+            return self
+
+    def __truediv__(self, other: Union[Unit, complex]) -> Unit:
         new_unit = self._clone()
         new_unit /= other
         return new_unit
