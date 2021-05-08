@@ -100,6 +100,7 @@ class Unit(metaclass=UnitsMeta):
         self._preferred_units = preferred_units
         self._numerical_val: complex = numerical_val * self.units_factor
 
+    # Basic functionality
     def _is_matching_dimensions(self, other: Unit) -> bool:
         if len(self._dimensions) != len(
             other._dimensions  # pylint: disable=protected-access
@@ -116,7 +117,7 @@ class Unit(metaclass=UnitsMeta):
 
     def _clone(self) -> Unit:
         return Unit(
-            self._numerical_val,
+            self.val,
             copy.deepcopy(self._dimensions),
             copy.deepcopy(self._preferred_units),
         )
@@ -244,6 +245,7 @@ class Unit(metaclass=UnitsMeta):
         units_representation = self.units_string
         return numerical_representation + units_representation
 
+    # Arithmetic functionality
     def __lt__(self, other: Unit) -> bool:
         assert self._is_matching_dimensions(other)
         return self._numerical_val < other._numerical_val  # type: ignore
@@ -457,6 +459,13 @@ class Unit(metaclass=UnitsMeta):
         result = Number(other) ** self
         result._mrege_preferences(self)
         return result
+
+    # Misc functions
+    def as_base_units(self) -> Unit:
+        """Return a unit without representation preferences"""
+        new_unit = self._clone()
+        new_unit._preferred_units = list()  # pylint: disable=protected-access
+        return new_unit
 
 
 class BaseUnit(Unit):

@@ -1,4 +1,4 @@
-from units_calculator.derived_units import Milliseconds, Milligrams
+from units_calculator.derived_units import Milligrams, Milliseconds
 
 
 def test_create_derived_unit() -> None:
@@ -10,3 +10,4 @@ def test_created_subderived_unit() -> None:
     x = Milligrams(6)
     assert repr(x) == "6.0mg"
     assert x.base_units_val == 6e-6
+    assert repr(x.as_base_units()) == "6e-06kg"
