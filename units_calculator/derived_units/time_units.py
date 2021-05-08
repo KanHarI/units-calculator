@@ -1,6 +1,5 @@
 """A module containing common derived time units"""
 
-# Time units
 from units_calculator.si_units import Seconds
 from units_calculator.units_bases import DerivedUnit
 
