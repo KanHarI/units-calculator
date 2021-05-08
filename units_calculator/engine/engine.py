@@ -247,26 +247,42 @@ class Unit(metaclass=UnitsMeta):
         return numerical_representation + units_representation
 
     # Arithmetic functionality
-    def __lt__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val < other._numerical_val  # type: ignore
+    def __lt__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val < other._numerical_val  # type: ignore
+        else:
+            return self < Number(other)
 
-    def __le__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val <= other._numerical_val  # type: ignore
+    def __le__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val <= other._numerical_val  # type: ignore
+        else:
+            return self <= Number(other)
 
     def __eq__(self, other: object) -> bool:
-        assert isinstance(other, Unit)
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val == other._numerical_val
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val == other._numerical_val
+        else:
+            if isinstance(other, (complex, float, int)):
+                return self == Number(other)
+            raise RuntimeError(f"Bad type in comparison with unit: {other}")
 
-    def __ge__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val >= other._numerical_val  # type: ignore
+    def __ge__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val >= other._numerical_val  # type: ignore
+        else:
+            return self >= Number(other)
 
-    def __gt__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val > other._numerical_val  # type: ignore
+    def __gt__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val > other._numerical_val  # type: ignore
+        else:
+            return self > Number(other)
 
     def __iadd__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)

@@ -2,7 +2,12 @@ from units_calculator.base_units.si_units import Meters, Seconds
 from units_calculator.derived_units.area_units import SquareCentimeters, SquareMeters
 from units_calculator.derived_units.mass_units import Milligrams
 from units_calculator.derived_units.time_units import Milliseconds
-from units_calculator.derived_units.volume_units import CubicCentimeters, Millilitres
+from units_calculator.derived_units.volume_units import (
+    CubicCentimeters,
+    CubicInches,
+    Millilitres,
+    USQuarts,
+)
 
 
 def test_create_derived_unit() -> None:
@@ -37,3 +42,7 @@ def test_high_dimensional_scaled_units() -> None:
 
 def test_multiple_pathways_to_same_unit() -> None:
     assert CubicCentimeters(5) == Millilitres(5)
+
+
+def test_us_units() -> None:
+    assert 57 < USQuarts(1) / CubicInches(1) < 58

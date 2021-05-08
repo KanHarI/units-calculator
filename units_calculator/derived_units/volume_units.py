@@ -1,7 +1,12 @@
 """A module for volume units"""
 
 from units_calculator.base_units.si_units import Meters
-from units_calculator.derived_units.length_units import Decimeters, Centimeters, Inches, Yards
+from units_calculator.derived_units.length_units import (
+    Centimeters,
+    Decimeters,
+    Inches,
+    Yards,
+)
 from units_calculator.engine.engine import DerivedUnit
 
 
@@ -74,7 +79,7 @@ class Megalitres(DerivedUnit):
     __multiplier__ = 1e3
 
 
-class CubicInch(DerivedUnit):
+class CubicInches(DerivedUnit):
     """Cubic inches"""
 
     __symbol__ = "in3"
