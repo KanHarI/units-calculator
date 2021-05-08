@@ -27,7 +27,7 @@ class UnitsMeta(type):
         )
         if symbol is None:
             return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
-        assert symbol.isalpha()
+        assert all(character not in ["0123456789.-+"] for character in symbol)
         is_base_unit = symbol is not None and BaseUnit in bases
         is_derived_unit = symbol is not None and DerivedUnit in bases
         if symbol in dimensions_dict:
