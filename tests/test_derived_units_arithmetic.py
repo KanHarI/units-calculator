@@ -27,6 +27,7 @@ def test_add_mixed_units() -> None:
     s2 = Milliseconds(100)
     assert repr(s1 + s2) == "0.6s"
     assert repr(s2 + s1) == "600.0ms"
+    assert s1 > s2
 
 
 def test_higher_dimensionality_units() -> None:
@@ -55,5 +56,5 @@ def test_negative_dimensions_units() -> None:
     mols = mass / molar_mass
     assert Mols(0.033) < mols < Mols(0.034)
     volume = Millilitres(20)
-    concentraion = mols / volume
-    assert 1.69 < (concentraion / Millimolars(1)) < 1.7
+    concentration = mols / volume
+    assert 1.69 < (concentration / Millimolars(1)) < 1.7

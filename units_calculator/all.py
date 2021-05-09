@@ -83,7 +83,15 @@ from .derived_units.volume_units import (
     USPints,
     USQuarts,
 )
-from .engine.engine import BaseUnit, DerivedUnit, Number, Unit, UnitsMeta
+from .engine.engine import (
+    BaseUnit,
+    DerivedUnit,
+    Number,
+    Unit,
+    UnitsMeta,
+    parse_pure_units,
+    parse_symbol,
+)
 from .si_units.si_units import (
     Amperes,
     Candelas,

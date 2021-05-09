@@ -11,4 +11,5 @@ setup(
     version=__version__,
     package_data={package: ["py.typed"] for package in packages},
     packages=find_packages(),
+    install_requires=["ordered-set"],
 )

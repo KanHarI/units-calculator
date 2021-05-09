@@ -6,6 +6,11 @@ import copy
 import math
 from typing import Any, Optional, Type, Union, cast
 
+from ordered_set import OrderedSet  # type: ignore
+
+UNITS_CHARACTERS_BLACKLIST = "*/ "
+UNITS_START_CHARACTERS_BLACKLIST = "0123456789e+-^(-)" + UNITS_CHARACTERS_BLACKLIST
+
 
 class UnitsMeta(type):
     """A metaclass for all unit classes"""
@@ -27,8 +32,8 @@ class UnitsMeta(type):
         )
         if symbol is None:
             return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
-        assert symbol[0] not in "0123456789e.-+ "
-        assert all(character not in ".-+ " for character in symbol)
+        assert symbol[0] not in UNITS_START_CHARACTERS_BLACKLIST
+        assert all(character not in UNITS_CHARACTERS_BLACKLIST for character in symbol)
         is_base_unit = symbol is not None and BaseUnit in bases
         is_derived_unit = symbol is not None and DerivedUnit in bases
         if symbol in dimensions_dict:
@@ -509,3 +514,58 @@ class Number(Unit):
 
     def __init__(self, numerical_val: complex):
         super().__init__(numerical_val, list(), list())
+
+
+def parse_symbol(symbol: str) -> UnitsMeta:
+    """Parse symbol as unit"""
+    if symbol not in dimensions_dict:
+        raise RuntimeError(f"Unrecognized symbol {symbol} in unit")
+    return dimensions_dict[symbol][1]
+
+
+def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
+    """Parse units string to list of units and exponents"""
+
+    def _parse_pure_unit_exp(unit_exp_str: str) -> tuple[UnitsMeta, int]:
+        unit_exp_parts = unit_exp_str.split("^")
+        if len(unit_exp_parts) > 2:
+            raise RuntimeError(f"Malformed unit: {unit_exp_str}")
+        symbol = unit_exp_parts[0]
+        unit = parse_symbol(symbol)
+        exp = 1
+        if len(unit_exp_parts) > 1:
+            try:
+                exp = int(unit_exp_parts[1].strip("()"))
+            except ValueError as e:
+                raise RuntimeError(
+                    f"Cannot parse exponent {unit_exp_parts[1]} in unit {unit_exp_str}"
+                ) from e
+        return unit, exp
+
+    def _parse_nodiv_unit_string(nodiv_str: str) -> list[tuple[UnitsMeta, int]]:
+        _result: list[tuple[UnitsMeta, int]] = list()
+        if len(nodiv_str) == 0:
+            return _result
+        units_exps = nodiv_str.split("*")
+        for unit_exp in units_exps:
+            _result.append(_parse_pure_unit_exp(unit_exp))
+        return _result
+
+    div_parts = units_str.split("/")
+    if len(div_parts) > 2:
+        raise RuntimeError("Cant have multiple '/' characters in unit string!")
+    result_parts: list[tuple[UnitsMeta, int]] = _parse_nodiv_unit_string(div_parts[0])
+    if len(div_parts) > 1:
+        result_parts += [
+            (unit, -exp) for (unit, exp) in _parse_nodiv_unit_string(div_parts[1])
+        ]
+    units = OrderedSet(unit for unit, _ in result_parts)
+    result: list[tuple[UnitsMeta, int]] = list()
+    for unit in units:
+        exp = 0
+        for res_unit, res_exp in result_parts:
+            if res_unit is unit:
+                exp += res_exp
+        if exp != 0:
+            result.append((unit, exp))
+    return result
