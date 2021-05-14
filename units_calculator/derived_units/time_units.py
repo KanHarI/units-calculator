@@ -1,7 +1,7 @@
 """A module containing common derived time units"""
 
-from units_calculator.base_units.si_units import Seconds
-from units_calculator.engine.units_bases import DerivedUnit
+from units_calculator.engine.engine import DerivedUnit
+from units_calculator.si_units.si_units import Seconds
 
 
 class Milliseconds(DerivedUnit):

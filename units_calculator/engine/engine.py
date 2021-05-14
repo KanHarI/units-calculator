@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import copy
 import math
+from collections import defaultdict
 from typing import Any, Optional, Type, Union, cast
+
+from ordered_set import OrderedSet  # type: ignore
+
+UNITS_CHARACTERS_BLACKLIST = "*/ "
+UNITS_START_CHARACTERS_BLACKLIST = "0123456789e+-^()j" + UNITS_CHARACTERS_BLACKLIST
 
 
 class UnitsMeta(type):
@@ -27,7 +33,8 @@ class UnitsMeta(type):
         )
         if symbol is None:
             return cast(UnitsMeta, super().__new__(cls, name, bases, namespace))
-        assert all(character not in ["0123456789.-+"] for character in symbol)
+        assert symbol[0] not in UNITS_START_CHARACTERS_BLACKLIST
+        assert all(character not in UNITS_CHARACTERS_BLACKLIST for character in symbol)
         is_base_unit = symbol is not None and BaseUnit in bases
         is_derived_unit = symbol is not None and DerivedUnit in bases
         if symbol in dimensions_dict:
@@ -45,21 +52,21 @@ class UnitsMeta(type):
             src_dimensions: list[tuple[UnitsMeta, int]] = namespace["__base_units__"]
             dimensions = list()
             namespace["__dimensions__"] = dimensions
-            multiplier: complex = namespace["__multiplier__"]
+            multiplier: complex = namespace.get("__multiplier__", 1)
             dimensions_idx_dict: dict[int, Dimension] = dict()
             for src_dimension in src_dimensions:
-                src_unit, exp = src_dimension
+                src_unit, derived_exp = src_dimension
                 src_unit_dimensions: Dimensions = src_unit.__dimensions__
-                for idx, exp, base_unit in src_unit_dimensions:
+                for idx, source_exp, base_unit in src_unit_dimensions:
                     existing_dimension = dimensions_idx_dict.get(
                         idx, (idx, 0, base_unit)
                     )
                     existing_dimension = (
                         existing_dimension[0],
-                        existing_dimension[1] + exp,
+                        existing_dimension[1] + source_exp * derived_exp,
                         existing_dimension[2],
                     )
-                    multiplier *= src_unit.__acc_multiplier__ ** exp
+                    multiplier *= src_unit.__acc_multiplier__ ** derived_exp
                     dimensions_idx_dict[idx] = existing_dimension
             namespace["__acc_multiplier__"] = multiplier
             dimension_idx_keys = list(dimensions_idx_dict.keys())
@@ -98,7 +105,7 @@ class Unit(metaclass=UnitsMeta):
     ):
         self._dimensions: Dimensions = dimensions
         self._preferred_units = preferred_units
-        self._numerical_val: complex = numerical_val * self.units_factor
+        self._numerical_val: complex = numerical_val
 
     # Basic functionality
     def _is_matching_dimensions(self, other: Unit) -> bool:
@@ -117,7 +124,7 @@ class Unit(metaclass=UnitsMeta):
 
     def _clone(self) -> Unit:
         return Unit(
-            self.val,
+            self._numerical_val,
             copy.deepcopy(self._dimensions),
             copy.deepcopy(self._preferred_units),
         )
@@ -150,7 +157,7 @@ class Unit(metaclass=UnitsMeta):
                         base_dimensions_exps, unit_dimensions_exp, -i - 1
                     )
                 )
-                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                if next_unit_sum_dim_exp_squared >= current_sum_dim_exp_squared:
                     break
                 i += 1
                 current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
@@ -163,7 +170,7 @@ class Unit(metaclass=UnitsMeta):
                         base_dimensions_exps, unit_dimensions_exp, -i + 1
                     )
                 )
-                if next_unit_sum_dim_exp_squared > current_sum_dim_exp_squared:
+                if next_unit_sum_dim_exp_squared >= current_sum_dim_exp_squared:
                     break
                 i -= 1
                 current_sum_dim_exp_squared = next_unit_sum_dim_exp_squared
@@ -205,28 +212,22 @@ class Unit(metaclass=UnitsMeta):
         return result
 
     @property
-    def units_string(self) -> str:
+    def _units_string_and_factor(self) -> tuple[str, complex]:
         """Return string representation of units"""
         units_representation_parts: list[str] = list()
+        factor: complex = 1
         for unit, exp in self.preferred_units_representation:
             units_symbol: str = unit.__symbol__
             if exp != 1:
                 units_symbol += f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
             units_representation_parts.append(units_symbol)
-        return "*".join(units_representation_parts)
+            factor *= unit.__acc_multiplier__ ** exp
+        return "*".join(units_representation_parts), factor
 
     @property
-    def units_factor(self) -> complex:
-        """Get units factor to base unit"""
-        units_factor: complex = 1
-        for unit, exp in self.preferred_units_representation:
-            units_factor *= unit.__acc_multiplier__ ** exp
-        return units_factor
-
-    @property
-    def val(self) -> complex:
-        """Get current unit numerical value"""
-        return self._numerical_val / self.units_factor
+    def representation_val(self) -> complex:
+        """Return numerical value of unit it preferred representation"""
+        return self._units_string_and_factor[1]
 
     @property
     def base_units_val(self) -> complex:
@@ -241,31 +242,49 @@ class Unit(metaclass=UnitsMeta):
                 self._preferred_units.append(preferred_unit)
 
     def __repr__(self) -> str:
-        numerical_representation = repr(self.val)
-        units_representation = self.units_string
+        units_str, units_factor = self._units_string_and_factor
+        val = self._numerical_val / units_factor
+        numerical_representation = repr(val)
+        units_representation = units_str
         return numerical_representation + units_representation
 
     # Arithmetic functionality
-    def __lt__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val < other._numerical_val  # type: ignore
+    def __lt__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val < other._numerical_val  # type: ignore
+        else:
+            return self < Number(other)
 
-    def __le__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val <= other._numerical_val  # type: ignore
+    def __le__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val <= other._numerical_val  # type: ignore
+        else:
+            return self <= Number(other)
 
     def __eq__(self, other: object) -> bool:
-        assert isinstance(other, Unit)
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val == other._numerical_val
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val == other._numerical_val
+        else:
+            if isinstance(other, (complex, float, int)):
+                return self == Number(other)
+            raise RuntimeError(f"Bad type in comparison with unit: {other}")
 
-    def __ge__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val >= other._numerical_val  # type: ignore
+    def __ge__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val >= other._numerical_val  # type: ignore
+        else:
+            return self >= Number(other)
 
-    def __gt__(self, other: Unit) -> bool:
-        assert self._is_matching_dimensions(other)
-        return self._numerical_val > other._numerical_val  # type: ignore
+    def __gt__(self, other: Union[Unit, complex]) -> bool:
+        if isinstance(other, Unit):
+            assert self._is_matching_dimensions(other)
+            return self._numerical_val > other._numerical_val  # type: ignore
+        else:
+            return self > Number(other)
 
     def __iadd__(self, other: Unit) -> Unit:
         assert self._is_matching_dimensions(other)
@@ -482,6 +501,7 @@ class DerivedUnit(Unit):
     __base_units__: list[tuple[UnitsMeta, int]]
 
     def __init__(self, numerical_val: complex):
+        numerical_val *= self.__acc_multiplier__
         super().__init__(numerical_val, self.__dimensions__, [self.__class__])
 
 
@@ -492,3 +512,106 @@ class Number(Unit):
 
     def __init__(self, numerical_val: complex):
         super().__init__(numerical_val, list(), list())
+
+
+def parse_symbol(symbol: str) -> UnitsMeta:
+    """Parse symbol as unit"""
+    if symbol not in dimensions_dict:
+        raise RuntimeError(f"Unrecognized symbol {symbol} in unit")
+    return dimensions_dict[symbol][1]
+
+
+def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
+    """Parse units string to list of units and exponents"""
+
+    def _parse_pure_unit_exp(unit_exp_str: str) -> tuple[UnitsMeta, int]:
+        unit_exp_parts = unit_exp_str.split("^")
+        if len(unit_exp_parts) > 2:
+            raise ValueError(f"Malformed unit: {unit_exp_str}")
+        symbol = unit_exp_parts[0]
+        unit = parse_symbol(symbol)
+        exp = 1
+        if len(unit_exp_parts) > 1:
+            try:
+                exp = int(unit_exp_parts[1].strip("()"))
+            except ValueError as e:
+                raise ValueError(
+                    f"Cannot parse exponent {unit_exp_parts[1]} in unit {unit_exp_str}"
+                ) from e
+        return unit, exp
+
+    def _parse_nodiv_unit_string(nodiv_str: str) -> list[tuple[UnitsMeta, int]]:
+        _result: list[tuple[UnitsMeta, int]] = list()
+        if len(nodiv_str) == 0:
+            return _result
+        units_exps = nodiv_str.split("*")
+        for unit_exp in units_exps:
+            _result.append(_parse_pure_unit_exp(unit_exp))
+        return _result
+
+    div_parts = units_str.split("/")
+    if len(div_parts) > 2:
+        raise ValueError("Cant have multiple '/' characters in unit string!")
+    result_parts: list[tuple[UnitsMeta, int]] = _parse_nodiv_unit_string(div_parts[0])
+    if len(div_parts) > 1:
+        result_parts += [
+            (unit, -exp) for (unit, exp) in _parse_nodiv_unit_string(div_parts[1])
+        ]
+    units = OrderedSet(unit for unit, _ in result_parts)
+    result: list[tuple[UnitsMeta, int]] = list()
+    for unit in units:
+        exp = 0
+        for res_unit, res_exp in result_parts:
+            if res_unit is unit:
+                exp += res_exp
+        if exp != 0:
+            result.append((unit, exp))
+    return result
+
+
+def _parse_numeric_val(numeric_part_str: str) -> complex:
+    try:
+        numeric_part: complex = int(numeric_part_str)
+    except ValueError:
+        try:
+            numeric_part = float(numeric_part_str)
+        except ValueError:
+            try:
+                numeric_part = complex(numeric_part_str)
+            except ValueError as e:
+                raise ValueError(
+                    f"Cannot parse numerical value {numeric_part_str}"
+                ) from e
+    return numeric_part
+
+
+def _units_to_dimensions(parsed_units: list[tuple[UnitsMeta, int]]) -> Dimensions:
+    idx_to_exp: dict[int, int] = defaultdict(int)
+    for unit, derived_exp in parsed_units:
+        for idx, src_exp, _ in unit.__dimensions__:
+            idx_to_exp[idx] += src_exp * derived_exp
+    idxes = list(idx_to_exp.keys())
+    idxes.sort()
+    result: Dimensions = list()
+    for idx in idxes:
+        result.append((idx, idx_to_exp[idx], idx_to_dimension[idx][1]))
+    return result
+
+
+def parse(val_with_units: str) -> Unit:
+    """Parse a string containing a units number+value into"""
+    i = 0
+    while val_with_units[i] in UNITS_START_CHARACTERS_BLACKLIST:
+        i += 1
+    numeric_part_str = val_with_units[:i]
+    if len(numeric_part_str) == 0:
+        raise ValueError(f"Cannot parse numerical part of unit{val_with_units}")
+    numeric_part = _parse_numeric_val(numeric_part_str)
+    parsed_units = parse_pure_units(val_with_units[i:])
+    for unit, exp in parsed_units:
+        numeric_part *= unit.__acc_multiplier__ ** exp
+    return Unit(
+        numeric_part,
+        _units_to_dimensions(parsed_units),
+        [unit for unit, exp in parsed_units],
+    )

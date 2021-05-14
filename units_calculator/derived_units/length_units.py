@@ -1,7 +1,7 @@
 """A module containing distance units definitions"""
 
-from units_calculator.base_units.si_units import Meters
-from units_calculator.engine.units_bases import DerivedUnit
+from units_calculator.engine.engine import DerivedUnit
+from units_calculator.si_units.si_units import Meters
 
 
 class Decimeters(DerivedUnit):

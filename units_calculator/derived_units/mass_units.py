@@ -1,7 +1,7 @@
 """A module containing weight unit definitions"""
 
-from units_calculator.base_units.si_units import Kilograms
-from units_calculator.engine.units_bases import DerivedUnit
+from units_calculator.engine.engine import DerivedUnit
+from units_calculator.si_units.si_units import Kilograms
 
 
 class Grams(DerivedUnit):
@@ -42,3 +42,51 @@ class Tonnes(DerivedUnit):
     __symbol__ = "t"
     __base_units__ = [(Kilograms, 1)]
     __multiplier__ = 1e3
+
+
+class Megatonnes(DerivedUnit):
+    """Megatonnes"""
+
+    __symbol__ = "Mt"
+    __base_units__ = [(Tonnes, 1)]
+    __multiplier__ = 1e6
+
+
+class Gigatonnes(DerivedUnit):
+    """Gigatonnes"""
+
+    __symbol__ = "Gt"
+    __base_units__ = [(Megatonnes, 1)]
+    __multiplier__ = 1e3
+
+
+class Daltons(DerivedUnit):
+    """Daltons"""
+
+    __symbol__ = "Da"
+    __base_units__ = [(Kilograms, 1)]
+    __multiplier__ = 1.66053906606050e-27
+
+
+class Slugs(DerivedUnit):
+    """Slugs"""
+
+    __symbol__ = "sl"
+    __base_units__ = [(Kilograms, 1)]
+    __multiplier__ = 14.59390
+
+
+class Pounds(DerivedUnit):
+    """Pounds"""
+
+    __symbol__ = "lb"
+    __base_units__ = [(Kilograms, 1)]
+    __multiplier__ = 0.45359237
+
+
+class SolarMasses(DerivedUnit):
+    """Solar masses"""
+
+    __symbol__ = "M☉"
+    __base_units__ = [(Kilograms, 1)]
+    __multiplier__ = 1.98847e30
