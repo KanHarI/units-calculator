@@ -66,8 +66,8 @@ class UnitsMeta(type):
                         existing_dimension[1] + source_exp * derived_exp,
                         existing_dimension[2],
                     )
-                    multiplier *= src_unit.__acc_multiplier__ ** derived_exp
                     dimensions_idx_dict[idx] = existing_dimension
+                multiplier *= src_unit.__acc_multiplier__ ** derived_exp
             namespace["__acc_multiplier__"] = multiplier
             dimension_idx_keys = list(dimensions_idx_dict.keys())
             dimension_idx_keys.sort()
@@ -205,9 +205,9 @@ class Unit(metaclass=UnitsMeta):
         for idx in idxs_to_pop:
             remaining_dimensions.pop(idx)
         # Fill in remaining base dimensions
-        for idx, _, _ in self._dimensions[::-1]:  # start with least common units
-            if idx not in remaining_dimensions:
-                continue
+        remaining_dimensions_keys = list(remaining_dimensions.keys())
+        remaining_dimensions_keys.sort()
+        for idx in remaining_dimensions_keys:
             result.append((idx_to_dimension[idx][1], remaining_dimensions[idx]))
         return result
 
@@ -233,6 +233,23 @@ class Unit(metaclass=UnitsMeta):
     def base_units_val(self) -> complex:
         """Return value in base units"""
         return self._numerical_val
+
+    def conv_units(self, units: list[UnitsMeta]) -> Unit:
+        """Convert dimensional value to required units"""
+        new_unit = self._clone()
+        for unit in units:
+            new_unit._preferred_units = [unit] + [  # pylint: disable=protected-access
+                _unit
+                for _unit in new_unit._preferred_units  # pylint: disable=protected-access
+                if _unit != unit
+            ]
+        return new_unit
+
+    def conv_parsed_units(self, units_str: str) -> Unit:
+        """Convert to units passed as string"""
+        units_with_exps = parse_pure_units(units_str)
+        units = [unit for unit, exp in units_with_exps]
+        return self.conv_units(units)
 
     def _mrege_preferences(self, other: Unit) -> None:
         for (

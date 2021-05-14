@@ -57,4 +57,4 @@ def test_negative_dimensions_units() -> None:
     assert Mols(0.033) < mols < Mols(0.034)
     volume = Millilitres(20)
     concentration = mols / volume
-    assert 1.69 < (concentration / Millimolars(1)) < 1.7
+    assert 1698 < (concentration / Millimolars(1)) < 1700

@@ -14,6 +14,7 @@ from .derived_units.area_units import (
     SquareMillimeters,
     SquareYards,
 )
+from .derived_units.chemistry_units import Millimolars, Molars
 from .derived_units.length_units import (
     Angstroms,
     AstronomicalUnits,
