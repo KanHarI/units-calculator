@@ -1,4 +1,11 @@
-from units_calculator.all import Kilograms, Meters, Seconds, parse, parse_pure_units, Milliseconds
+from units_calculator.all import (
+    Kilograms,
+    Meters,
+    Milliseconds,
+    Seconds,
+    parse,
+    parse_pure_units,
+)
 
 
 def test_parse_pure_units() -> None:
