@@ -10,7 +10,7 @@ from typing import Any, Optional, Type, Union, cast
 from ordered_set import OrderedSet  # type: ignore
 
 UNITS_CHARACTERS_BLACKLIST = "*/ "
-UNITS_START_CHARACTERS_BLACKLIST = "0123456789e+-^()j" + UNITS_CHARACTERS_BLACKLIST
+UNITS_START_CHARACTERS_BLACKLIST = "0123456789.e+-^()j" + UNITS_CHARACTERS_BLACKLIST
 
 
 class UnitsMeta(type):
