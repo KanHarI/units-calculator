@@ -89,6 +89,7 @@ from .engine.engine import (
     Number,
     Unit,
     UnitsMeta,
+    parse,
     parse_pure_units,
     parse_symbol,
 )

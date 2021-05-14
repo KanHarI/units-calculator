@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import copy
 import math
+from collections import defaultdict
 from typing import Any, Optional, Type, Union, cast
 
 from ordered_set import OrderedSet  # type: ignore
 
 UNITS_CHARACTERS_BLACKLIST = "*/ "
-UNITS_START_CHARACTERS_BLACKLIST = "0123456789e+-^(-)" + UNITS_CHARACTERS_BLACKLIST
+UNITS_START_CHARACTERS_BLACKLIST = "0123456789e+-^()j" + UNITS_CHARACTERS_BLACKLIST
 
 
 class UnitsMeta(type):
@@ -104,7 +105,7 @@ class Unit(metaclass=UnitsMeta):
     ):
         self._dimensions: Dimensions = dimensions
         self._preferred_units = preferred_units
-        self._numerical_val: complex = numerical_val * self.units_factor
+        self._numerical_val: complex = numerical_val
 
     # Basic functionality
     def _is_matching_dimensions(self, other: Unit) -> bool:
@@ -123,7 +124,7 @@ class Unit(metaclass=UnitsMeta):
 
     def _clone(self) -> Unit:
         return Unit(
-            self.val,
+            self._numerical_val,
             copy.deepcopy(self._dimensions),
             copy.deepcopy(self._preferred_units),
         )
@@ -211,28 +212,22 @@ class Unit(metaclass=UnitsMeta):
         return result
 
     @property
-    def units_string(self) -> str:
+    def _units_string_and_factor(self) -> tuple[str, complex]:
         """Return string representation of units"""
         units_representation_parts: list[str] = list()
+        factor: complex = 1
         for unit, exp in self.preferred_units_representation:
             units_symbol: str = unit.__symbol__
             if exp != 1:
                 units_symbol += f"^{str(exp) if exp > 0 else '(' + str(exp) + ')'}"
             units_representation_parts.append(units_symbol)
-        return "*".join(units_representation_parts)
+            factor *= unit.__acc_multiplier__ ** exp
+        return "*".join(units_representation_parts), factor
 
     @property
-    def units_factor(self) -> complex:
-        """Get units factor to base unit"""
-        units_factor: complex = 1
-        for unit, exp in self.preferred_units_representation:
-            units_factor *= unit.__acc_multiplier__ ** exp
-        return units_factor
-
-    @property
-    def val(self) -> complex:
-        """Get current unit numerical value"""
-        return self._numerical_val / self.units_factor
+    def representation_val(self) -> complex:
+        """Return numerical value of unit it preferred representation"""
+        return self._units_string_and_factor[1]
 
     @property
     def base_units_val(self) -> complex:
@@ -247,8 +242,10 @@ class Unit(metaclass=UnitsMeta):
                 self._preferred_units.append(preferred_unit)
 
     def __repr__(self) -> str:
-        numerical_representation = repr(self.val)
-        units_representation = self.units_string
+        units_str, units_factor = self._units_string_and_factor
+        val = self._numerical_val / units_factor
+        numerical_representation = repr(val)
+        units_representation = units_str
         return numerical_representation + units_representation
 
     # Arithmetic functionality
@@ -504,6 +501,7 @@ class DerivedUnit(Unit):
     __base_units__: list[tuple[UnitsMeta, int]]
 
     def __init__(self, numerical_val: complex):
+        numerical_val *= self.__acc_multiplier__
         super().__init__(numerical_val, self.__dimensions__, [self.__class__])
 
 
@@ -529,7 +527,7 @@ def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
     def _parse_pure_unit_exp(unit_exp_str: str) -> tuple[UnitsMeta, int]:
         unit_exp_parts = unit_exp_str.split("^")
         if len(unit_exp_parts) > 2:
-            raise RuntimeError(f"Malformed unit: {unit_exp_str}")
+            raise ValueError(f"Malformed unit: {unit_exp_str}")
         symbol = unit_exp_parts[0]
         unit = parse_symbol(symbol)
         exp = 1
@@ -537,7 +535,7 @@ def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
             try:
                 exp = int(unit_exp_parts[1].strip("()"))
             except ValueError as e:
-                raise RuntimeError(
+                raise ValueError(
                     f"Cannot parse exponent {unit_exp_parts[1]} in unit {unit_exp_str}"
                 ) from e
         return unit, exp
@@ -553,7 +551,7 @@ def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
 
     div_parts = units_str.split("/")
     if len(div_parts) > 2:
-        raise RuntimeError("Cant have multiple '/' characters in unit string!")
+        raise ValueError("Cant have multiple '/' characters in unit string!")
     result_parts: list[tuple[UnitsMeta, int]] = _parse_nodiv_unit_string(div_parts[0])
     if len(div_parts) > 1:
         result_parts += [
@@ -569,3 +567,51 @@ def parse_pure_units(units_str: str) -> list[tuple[UnitsMeta, int]]:
         if exp != 0:
             result.append((unit, exp))
     return result
+
+
+def _parse_numeric_val(numeric_part_str: str) -> complex:
+    try:
+        numeric_part: complex = int(numeric_part_str)
+    except ValueError:
+        try:
+            numeric_part = float(numeric_part_str)
+        except ValueError:
+            try:
+                numeric_part = complex(numeric_part_str)
+            except ValueError as e:
+                raise ValueError(
+                    f"Cannot parse numerical value {numeric_part_str}"
+                ) from e
+    return numeric_part
+
+
+def _units_to_dimensions(parsed_units: list[tuple[UnitsMeta, int]]) -> Dimensions:
+    idx_to_exp: dict[int, int] = defaultdict(int)
+    for unit, derived_exp in parsed_units:
+        for idx, src_exp, _ in unit.__dimensions__:
+            idx_to_exp[idx] += src_exp * derived_exp
+    idxes = list(idx_to_exp.keys())
+    idxes.sort()
+    result: Dimensions = list()
+    for idx in idxes:
+        result.append((idx, idx_to_exp[idx], idx_to_dimension[idx][1]))
+    return result
+
+
+def parse(val_with_units: str) -> Unit:
+    """Parse a string containing a units number+value into"""
+    i = 0
+    while val_with_units[i] in UNITS_START_CHARACTERS_BLACKLIST:
+        i += 1
+    numeric_part_str = val_with_units[:i]
+    if len(numeric_part_str) == 0:
+        raise ValueError(f"Cannot parse numerical part of unit{val_with_units}")
+    numeric_part = _parse_numeric_val(numeric_part_str)
+    parsed_units = parse_pure_units(val_with_units[i:])
+    for unit, exp in parsed_units:
+        numeric_part *= unit.__acc_multiplier__ ** exp
+    return Unit(
+        numeric_part,
+        _units_to_dimensions(parsed_units),
+        [unit for unit, exp in parsed_units],
+    )
