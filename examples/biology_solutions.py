@@ -1,4 +1,6 @@
-from units_calculator.all import parse
+import sys
+
+from units_calculator.all import parse, Unit
 
 
 def test_biology_solutions_1() -> None:
@@ -8,7 +10,7 @@ def test_biology_solutions_1() -> None:
     molecular_weight = parse("544.43g/mol")
     solution1_molar_concentration = solution1_concentraion_by_mass / molecular_weight
     sol2_to_sol1_concentraion_ratio = (
-        solution2_molar_concentration / solution1_molar_concentration
+            solution2_molar_concentration / solution1_molar_concentration
     )
     if solution1_molar_concentration > solution2_molar_concentration:
         print("Solution 1 is stronger!")
@@ -43,4 +45,17 @@ def test_biological_solutions_3() -> None:
     )
 
 
-# def dilution_series(concentrations_and_src_volumes: list[tuple[Unit, Unit]]) -> None:
+def dilution_series(concentrations_and_src_volumes: list[tuple[Unit, Unit]]) -> None:
+    """Given original volumes and concentration, calculate diluting agent needed to achive next
+    dilution in a series"""
+
+def main() -> int:
+    """Entry point"""
+    test_biology_solutions_1()
+    test_biology_solutions_2()
+    test_biological_solutions_3()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

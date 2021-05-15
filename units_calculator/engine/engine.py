@@ -245,7 +245,7 @@ class Unit(metaclass=UnitsMeta):
             ]
         return new_unit
 
-    def conv_parsed_units(self, units_str: str) -> Unit:
+    def as_units(self, units_str: str) -> Unit:
         """Convert to units passed as string"""
         units_with_exps = parse_pure_units(units_str)
         units = [unit for unit, exp in units_with_exps]

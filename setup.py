@@ -4,9 +4,9 @@ import pathlib
 
 from setuptools import find_packages, setup  # type: ignore
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
-packages = find_packages(exclude=["tests"])
+packages = find_packages(exclude=["tests", "examples"])
 
 HERE = pathlib.Path(__file__).parent
 README_CONTENT = (HERE / "README.md").read_text()
