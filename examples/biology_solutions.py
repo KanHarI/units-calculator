@@ -1,9 +1,9 @@
 import sys
 
-from units_calculator.all import parse, Unit
+from units_calculator.all import parse
 
 
-def test_biology_solutions_1() -> None:
+def example_compare_solutions_strength() -> None:
     """Convert 5 ug/ul to mM and compare with a 20mM solution"""
     solution1_concentraion_by_mass = parse("5ug/ul")
     solution2_molar_concentration = parse("20mM")
@@ -24,7 +24,7 @@ def test_biology_solutions_1() -> None:
     )
 
 
-def test_biology_solutions_2() -> None:
+def example_dilute_to_required_mass_concentration() -> None:
     """Dilute a given amount of source material to solution of the required size
     10mg to 120ug/ul"""
     original_mass = parse("10mg")
@@ -33,7 +33,7 @@ def test_biology_solutions_2() -> None:
     print(f"Required diluting agent volume is {required_volume}")
 
 
-def test_biological_solutions_3() -> None:
+def example_dilute_to_required_molar_concentration() -> None:
     """5mg powder to 20mM"""
     powder_mass = parse("5mg")
     target_dilution = parse("20mM")
@@ -45,15 +45,11 @@ def test_biological_solutions_3() -> None:
     )
 
 
-def dilution_series(concentrations_and_src_volumes: list[tuple[Unit, Unit]]) -> None:
-    """Given original volumes and concentration, calculate diluting agent needed to achive next
-    dilution in a series"""
-
 def main() -> int:
     """Entry point"""
-    test_biology_solutions_1()
-    test_biology_solutions_2()
-    test_biological_solutions_3()
+    example_compare_solutions_strength()
+    example_dilute_to_required_mass_concentration()
+    example_dilute_to_required_molar_concentration()
     return 0
 
 
