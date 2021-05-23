@@ -4,7 +4,7 @@ import pathlib
 
 from setuptools import find_packages, setup  # type: ignore
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 packages = find_packages(exclude=["tests", "examples"])
 

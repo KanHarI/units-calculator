@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import math
 from collections import defaultdict
-from typing import Any, Optional, Type, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ordered_set import OrderedSet  # type: ignore
 
@@ -82,12 +82,12 @@ class UnitsMeta(type):
         return result
 
 
-dimensions_dict: dict[str, tuple[Optional[int], UnitsMeta]] = dict()
-idx_to_dimension: dict[int, tuple[str, UnitsMeta]] = dict()
+dimensions_dict: Dict[str, tuple[Optional[int], UnitsMeta]] = dict()
+idx_to_dimension: Dict[int, tuple[str, UnitsMeta]] = dict()
 
 # A list of dimensions and their exponents
-Dimension = tuple[int, int, UnitsMeta]
-Dimensions = list[tuple[int, int, UnitsMeta]]
+Dimension = Tuple[int, int, UnitsMeta]
+Dimensions = List[Tuple[int, int, UnitsMeta]]
 
 
 class Unit(metaclass=UnitsMeta):
